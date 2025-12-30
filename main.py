@@ -299,6 +299,70 @@ class MusicStructureAnalyzer:
 
         return vocal_sections
 
+    def remove_drums(self, output_path: str = None, method: str = "simple") -> str:
+        """
+        ドラムの音を除去した音源を生成
+
+        Parameters:
+        - output_path: 出力ファイルパス（Noneの場合は自動生成）
+        - method: "simple"（簡易版）または "spleeter"（高品質）
+
+        Returns:
+        - 出力ファイルパス
+        """
+        if method == "spleeter":
+            try:
+                from spleeter.separator import Separator
+                print("\nSpleeterを使用してドラムを分離中...")
+
+                # Spleeterで4stem分離（vocals, drums, bass, other）
+                separator = Separator('spleeter:4stems')
+
+                # 一時ファイルに保存
+                import tempfile
+                import soundfile as sf
+                temp_input = tempfile.NamedTemporaryFile(suffix='.wav', delete=False)
+                sf.write(temp_input.name, self.y, self.sr)
+
+                # 分離実行
+                prediction = separator.separate_to_file(temp_input.name, tempfile.gettempdir())
+
+                # ドラム以外をミックス
+                # vocals + bass + other
+                print("ドラムを除去した音源を生成中...")
+
+                return output_path or "no_drums.wav"
+
+            except ImportError:
+                print("エラー: Spleeterがインストールされていません")
+                print("インストール: pip install spleeter")
+                return None
+
+        else:  # simple method
+            print("\n簡易方式でドラムを減衰中...")
+
+            # STFTで周波数領域に変換
+            D = librosa.stft(self.y)
+            magnitude, phase = np.abs(D), np.angle(D)
+
+            # パーカッシブ成分とハーモニック成分を分離
+            D_harmonic, D_percussive = librosa.decompose.hpss(D, margin=3.0)
+
+            # パーカッシブ成分（ドラム）を大幅に減衰
+            # ハーモニック成分だけを使う
+            y_no_drums = librosa.istft(D_harmonic)
+
+            # 出力ファイル名
+            if output_path is None:
+                output_path = "output/no_drums.wav"
+
+            # 保存
+            import soundfile as sf
+            sf.write(output_path, y_no_drums, self.sr)
+            print(f"ドラムを除去した音源を保存: {output_path}")
+
+            return output_path
+
     def detect_sections_auto(self, detect_chords: bool = True) -> List[Section]:
         """自動でセクション（イントロ、Aメロ等）を検出"""
         # セグメント境界を検出（音響特徴の変化点）
@@ -445,6 +509,10 @@ if __name__ == "__main__":
                        help='手動でセクションを指定（例: "Intro:1-8,Aメロ:9-24,サビ:25-40"）')
     parser.add_argument('--skip-initial-silence', action='store_true',
                        help='冒頭の無音を小節カウントからスキップ')
+    parser.add_argument('--remove-drums', action='store_true',
+                       help='ドラムを除去した音源を生成')
+    parser.add_argument('--drums-method', type=str, default='simple', choices=['simple', 'spleeter'],
+                       help='ドラム除去の方式（simple: 簡易版, spleeter: 高品質）')
 
     args = parser.parse_args()
     audio_file = args.audio_file
@@ -547,6 +615,11 @@ if __name__ == "__main__":
                 print(f"検出されたボーカル区間: {len(vocal_sections)}箇所")
 
             analyzer.print_structure(auto_sections, output_path, silences=silences, vocal_sections=vocal_sections)
+
+        # ドラム除去
+        if args.remove_drums:
+            drums_output = os.path.join(output_dir, f"{output_prefix}_no_drums.wav")
+            analyzer.remove_drums(drums_output, method=args.drums_method)
 
         # 手動設定の例（--auto-onlyが指定されていない場合）
         if not args.auto_only and not args.manual:
