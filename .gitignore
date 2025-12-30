@@ -1,5 +1,11 @@
+.DS_Store
+
 input/*.mp3
 input/*.mp4
 input/*.m4a
 input/*.wav
 output/*.txt
+output/*.mp3
+output/*.mp4
+output/*.m4a
+output/*.wav
