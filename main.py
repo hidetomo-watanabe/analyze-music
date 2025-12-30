@@ -150,7 +150,7 @@ class DrumCopyHelper:
 
         return bars
 
-    def print_bars_with_intensity(self, bars: List[Bar], output_file: str = None):
+    def print_bars_with_intensity(self, bars: List[Bar], output_file: str = None, intensity_scale: float = 1.0):
         """小節情報とビート強度を統合して表示・保存"""
         output = []
         output.append("=" * 90)
@@ -169,7 +169,9 @@ class DrumCopyHelper:
             output.append(f"\n小節 {group[0].bar_num:3d} - {group[-1].bar_num:3d}:")
 
             for bar in group:
-                intensity_bar = "█" * int(bar.avg_intensity * 40)
+                # 強度をスケーリング（最大40文字に制限）
+                scaled_intensity = min(bar.avg_intensity * intensity_scale, 1.0)
+                intensity_bar = "█" * int(scaled_intensity * 40)
                 output.append(f"  {bar.bar_num:3d} | {intensity_bar:40s} | {bar.chord:4s} | {bar.start_time:6.2f}s - {bar.end_time:6.2f}s")
 
         output.append("\n" + "=" * 90)
@@ -242,6 +244,8 @@ if __name__ == "__main__":
     parser.add_argument('--slow', type=float, default=None, help='テンポを落とした音源を生成（例: 0.75で75%）')
     parser.add_argument('--extract', type=str, default=None, help='特定の小節を切り出し（例: "25-32"）')
     parser.add_argument('--all', action='store_true', help='すべての音源生成機能を実行')
+    parser.add_argument('--intensity-scale', type=float, default=2.0,
+                       help='強度表示の倍率（デフォルト: 2.0、大きいほど強度が高く表示される）')
 
     args = parser.parse_args()
     audio_file = args.audio_file
@@ -271,7 +275,7 @@ if __name__ == "__main__":
 
         # 結果を表示・保存（小節一覧 + 強度マップを統合）
         output_file = os.path.join(output_dir, f"{output_prefix}_analysis.txt")
-        helper.print_bars_with_intensity(bars, output_file)
+        helper.print_bars_with_intensity(bars, output_file, intensity_scale=args.intensity_scale)
 
         # 各機能の実行
         if args.all or args.drums_only:
