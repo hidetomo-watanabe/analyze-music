@@ -255,8 +255,7 @@ if __name__ == "__main__":
     parser.add_argument('--no-drums', action='store_true', help='ドラム除去音源を生成')
     parser.add_argument('--slow', type=float, default=None, help='テンポを落とした音源を生成（例: 0.75で75%）')
     parser.add_argument('--extract', type=str, default=None, help='特定の小節を切り出し（例: "25-32"）')
-    parser.add_argument('--visualize', action='store_true', help='ビートの強弱を可視化')
-    parser.add_argument('--all', action='store_true', help='すべての機能を実行')
+    parser.add_argument('--all', action='store_true', help='すべての音源生成機能を実行')
 
     args = parser.parse_args()
     audio_file = args.audio_file
@@ -288,6 +287,10 @@ if __name__ == "__main__":
         bars_output = os.path.join(output_dir, f"{output_prefix}_bars.txt")
         helper.print_bars(bars, bars_output)
 
+        # ビートの強弱を可視化（デフォルトで実行）
+        viz_output = os.path.join(output_dir, f"{output_prefix}_intensity.txt")
+        helper.visualize_intensity(viz_output, bars)
+
         # 各機能の実行
         if args.all or args.drums_only:
             drums_output = os.path.join(output_dir, f"{output_prefix}_drums_only.wav")
@@ -309,10 +312,6 @@ if __name__ == "__main__":
                 helper.export_bar_range(extract_output, start_bar, end_bar, bars)
             except ValueError:
                 print("エラー: --extract のフォーマットが不正です（例: --extract 25-32）")
-
-        if args.all or args.visualize:
-            viz_output = os.path.join(output_dir, f"{output_prefix}_intensity.txt")
-            helper.visualize_intensity(viz_output, bars)
 
         print("\n" + "=" * 90)
         print("完了！")
