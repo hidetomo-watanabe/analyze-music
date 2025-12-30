@@ -36,7 +36,8 @@ class MusicStructureAnalyzer:
         # BPM推定
         if bpm is None:
             tempo, _ = librosa.beat.beat_track(y=self.y, sr=self.sr)
-            self.bpm = float(tempo)
+            # numpy配列からスカラー値を安全に取得
+            self.bpm = float(tempo.item() if hasattr(tempo, 'item') else tempo)
             print(f"推定BPM: {self.bpm:.1f}")
         else:
             self.bpm = bpm
