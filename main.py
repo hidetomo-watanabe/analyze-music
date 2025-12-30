@@ -150,19 +150,29 @@ class DrumCopyHelper:
 
         return bars
 
-    def print_bars(self, bars: List[Bar], output_file: str = None):
-        """小節情報を表示・保存"""
+    def print_bars_with_intensity(self, bars: List[Bar], output_file: str = None):
+        """小節情報とビート強度を統合して表示・保存"""
         output = []
         output.append("=" * 90)
-        output.append("ドラム耳コピ支援 - 小節一覧")
+        output.append("ドラム耳コピ支援")
         output.append("=" * 90)
         output.append(f"BPM: {self.bpm:.1f} | 拍子: {self.beats_per_bar}/4 | 総小節数: {len(bars)}")
+        output.append("=" * 90)
+
+        # 強度マップ（コードと秒数付き）
+        output.append("\n【ドラムの強度マップ】")
         output.append("-" * 90)
 
-        for bar in bars:
-            output.append(str(bar))
+        # 8小節ごとにグループ化
+        for i in range(0, len(bars), 8):
+            group = bars[i:i+8]
+            output.append(f"\n小節 {group[0].bar_num:3d} - {group[-1].bar_num:3d}:")
 
-        output.append("=" * 90)
+            for bar in group:
+                intensity_bar = "█" * int(bar.avg_intensity * 40)
+                output.append(f"  {bar.bar_num:3d} | {intensity_bar:40s} | {bar.chord:4s} | {bar.start_time:6.2f}s - {bar.end_time:6.2f}s")
+
+        output.append("\n" + "=" * 90)
 
         # コンソールに表示
         print("\n" + "\n".join(output))
@@ -211,32 +221,8 @@ class DrumCopyHelper:
         print(f"保存完了: {output_path}")
 
     def visualize_intensity(self, output_path: str, bars: List[Bar]):
-        """ビートの強弱を可視化（テキストベース）"""
-        output = []
-        output.append("=" * 90)
-        output.append("ドラムの強度マップ（視覚化）")
-        output.append("=" * 90)
-        output.append(f"BPM: {self.bpm:.1f} | 総小節数: {len(bars)}")
-        output.append("-" * 90)
-
-        # 8小節ごとにグループ化
-        for i in range(0, len(bars), 8):
-            group = bars[i:i+8]
-            output.append(f"\n小節 {group[0].bar_num:3d} - {group[-1].bar_num:3d}:")
-
-            for bar in group:
-                intensity_bar = "█" * int(bar.avg_intensity * 40)
-                output.append(f"  {bar.bar_num:3d} | {intensity_bar}")
-
-        output.append("\n" + "=" * 90)
-
-        # コンソールに表示
-        print("\n" + "\n".join(output))
-
-        # ファイルに保存
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write("\n".join(output))
-        print(f"\n強度マップを保存: {output_path}")
+        """ビートの強弱を可視化（この機能は print_bars_with_intensity に統合されました）"""
+        pass
 
 
 # メイン実行
@@ -283,13 +269,9 @@ if __name__ == "__main__":
         print("\n小節ごとに分析中...")
         bars = helper.analyze_bars()
 
-        # 結果を表示・保存
-        bars_output = os.path.join(output_dir, f"{output_prefix}_bars.txt")
-        helper.print_bars(bars, bars_output)
-
-        # ビートの強弱を可視化（デフォルトで実行）
-        viz_output = os.path.join(output_dir, f"{output_prefix}_intensity.txt")
-        helper.visualize_intensity(viz_output, bars)
+        # 結果を表示・保存（小節一覧 + 強度マップを統合）
+        output_file = os.path.join(output_dir, f"{output_prefix}_analysis.txt")
+        helper.print_bars_with_intensity(bars, output_file)
 
         # 各機能の実行
         if args.all or args.drums_only:
